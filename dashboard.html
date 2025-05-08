@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="dashboard-root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const socket = io('https://ros-nzq9.onrender.com'); // Render URL ကို ပြန်သတ်မှတ်ပါ
+
+        const Dashboard = () => {
+            const [orders, setOrders] = useState([]);
+            const [language, setLanguage] = useState('mm');
+
+            useEffect(() => {
+                socket.on('newOrder', (order) => {
+                    setOrders(prev => [...prev, order]);
+                });
+
+                socket.on('orderUpdate', (updatedOrder) => {
+                    setOrders(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+                });
+
+                return () => {
+                    socket.off('newOrder');
+                    socket.off('orderUpdate');
+                };
+            }, []);
+
+            const handleUpdateStatus = (orderId, newStatus) => {
+                const order = orders.find(o => o.id === orderId);
+                if (order) {
+                    socket.emit('orderUpdate', { ...order, status: newStatus });
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-100 p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center">
+                            <img src="https://images.unsplash.com/photo-1589301771357-2b157f5d29f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Logo" className="h-12 mr-4" />
+                            <h1 className="text-2xl font-bold">{language === 'mm' ? 'ဒက်ရှ်ဘုတ်' : 'Dashboard'}</h1>
+                        </div>
+                        <select
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className="border p-2 rounded"
+                        >
+                            <option value="mm">မြန်မာ</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    {orders.length === 0 ? (
+                        <p>{language === 'mm' ? 'မှာယူမှုမရှိပါ။' : 'No orders yet.'}</p>
+                    ) : (
+                        <div>
+                            {orders.map((order, index) => (
+                                <div key={index} className="mb-4 bg-white p-4 rounded shadow-md">
+                                    <p><strong>{language === 'mm' ? `မှာယူမှု #${index + 1}` : `Order #${index + 1}`}</strong></p>
+                                    <p>{language === 'mm' ? 'ဖောက်သည် ID' : 'Customer ID'}: {order.customerId}</p>
+                                    <p>{language === 'mm' ? 'နာမည်' : 'Name'}: {order.customerName}</p>
+                                    <p>{language === 'mm' ? 'ဖုန်းနံပါတ်' : 'Phone'}: {order.customerPhone}</p>
+                                    <p>{language === 'mm' ? 'အမျိုးအစား' : 'Type'}: {order.orderType}</p>
+                                    <p>{language === 'mm' ? 'စုစုပေါင်း' : 'Total'}: ${order.total.toFixed(2)}</p>
+                                    <p>{language === 'mm' ? 'အချိန်' : 'Time'}: {new Date(order.timestamp).toLocaleString()}</p>
+                                    <p className="font-bold">{language === 'mm' ? 'အခြေအနေ' : 'Status'}: {order.status}</p>
+                                    <div className="mt-2">
+                                        <strong>{language === 'mm' ? 'မှာယူထားသည်များ' : 'Items'}:</strong>
+                                        <ul className="list-disc pl-5">
+                                            {order.orderDetails.map((item, i) => (
+                                                <li key={i}>{item.name} x{item.quantity} - ${(item.price * item.quantity).toFixed(2)}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="mt-2">
+                                        <select
+                                            value={order.status}
+                                            onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                                            className="border p-2 rounded"
+                                        >
+                                            <option value="Pending">{language === 'mm' ? 'စောင့်ဆိုင်းနေသည်' : 'Pending'}</option>
+                                            <option value="In Process">{language === 'mm' ? 'လုပ်ဆောင်နေပါပြီ' : 'In Process'}</option>
+                                            <option value="Delivered">{language === 'mm' ? 'ပို့ဆောင်ပြီးပါပြီ' : 'Delivered'}</option>
+                                            <option value="Cancelled">{language === 'mm' ? 'ပယ်ဖျက်လိုက်ပါပြီ' : 'Cancelled'}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('dashboard-root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>

@@ -1,570 +1,412 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>စားသောက်ဆိုင် Menu</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
-  <style>
-    .menu-item-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-    }
-    @media (min-width: 1024px) {
-      .menu-item-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-      }
-    }
-    .category-nav {
-      display: flex;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-    .category-nav::-webkit-scrollbar {
-      display: none;
-    }
-    .category-nav > div {
-      scroll-snap-align: start;
-      flex: 0 0 auto;
-    }
-    .header-image {
-      height: 16rem;
-    }
-    .white-overlay {
-      top: calc(256px - 25.6px);
-    }
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: white;
-      min-width: 120px;
-      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-      z-index: 1;
-      border-radius: 0.5rem;
-    }
-    .dropdown:hover .dropdown-content {
-      display: block;
-    }
-    .dropdown-content div {
-      padding: 8px 16px;
-      cursor: pointer;
-    }
-    .dropdown-content div:hover {
-      background-color: #f1f1f1;
-      border-radius: 0.5rem;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-    const socket = io('https://ros-nzq9.onrender.com');
+        const socket = io('https://ros-nzq9.onrender.com'); // Render URL ကို ပြန်သတ်မှတ်ပါ
 
-    const menuData = {
-      'Appetizers': Array(10).fill().map((_, i) => ({
-        id: `app-${i}`,
-        name: `အစားအစာ ${i + 1}`,
-        description: 'အစားအစာအစပို့တစ်ခုကို စားဖို့ အဆင့်မြှင့်ပေးပါတယ်။',
-        price: 5.99 + i,
-        image: `https://images.unsplash.com/photo-1514326640560-7d063ef2aed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Main Course': Array(10).fill().map((_, i) => ({
-        id: `main-${i}`,
-        name: `အဓိကဟင်း ${i + 1}`,
-        description: 'သင့်ဗိုက်ကို ကျန်းမာစေတဲ့ အဓိကဟင်းတစ်ခု။',
-        price: 12.99 + i,
-        image: `https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Desserts': Array(10).fill().map((_, i) => ({
-        id: `dessert-${i}`,
-        name: `အချိုပွဲ ${i + 1}`,
-        description: 'သင့်နေ့ရက်ကို အဆုံးသတ်ဖို့ ချမ်းသာတဲ့ အစားအစာ။',
-        price: 4.99 + i,
-        image: `https://images.unsplash.com/photo-1563729784474-d77dbb933a3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Drinks': Array(10).fill().map((_, i) => ({
-        id: `drink-${i}`,
-        name: `သောက်စရာ ${i + 1}`,
-        description: 'သင့်ဟင်းကို လိုက်ဖက်တဲ့ သောက်စရာတစ်ခု။',
-        price: 2.99 + i,
-        image: `https://images.unsplash.com/photo-1513553404607-988bf2703777?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Salads': Array(10).fill().map((_, i) => ({
-        id: `salad-${i}`,
-        name: `သုပ် ${i + 1}`,
-        description: 'လှပပြီး ကျန်းမာရေးနဲ့ ကိုက်ညီတဲ့ သုပ်ရွက်တစ်ခု။',
-        price: 6.99 + i,
-        image: `https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Soups': Array(10).fill().map((_, i) => ({
-        id: `soup-${i}`,
-        name: `ဟင်းချို ${i + 1}`,
-        description: 'အပူပေးပြီး သက်သာစေတဲ့ ဟင်းချိုတစ်ခု။',
-        price: 4.99 + i,
-        image: `https://images.unsplash.com/photo-1547592166-23ac45744c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Sides': Array(10).fill().map((_, i) => ({
-        id: `side-${i}`,
-        name: `ဘေးထွက် ${i + 1}`,
-        description: 'သင့်ဟင်းနဲ့ လိုက်ဖက်တဲ့ ဘေးထွက်အစားအစာ။',
-        price: 3.99 + i,
-        image: `https://images.unsplash.com/photo-1626700051175-6818013e1d4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      })),
-      'Specials': Array(10).fill().map((_, i) => ({
-        id: `special-${i}`,
-        name: `အထူး ${i + 1}`,
-        description: 'ချက်ပြုတ်သူရဲ့ ထူးခြားတဲ့ ဟင်းတစ်ခု။',
-        price: 15.99 + i,
-        image: `https://images.unsplash.com/photo-1551218807-89649560f1e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
-      }))
-    };
+        const menuData = {
+            'Appetizers': Array(10).fill().map((_, i) => ({
+                id: `app-${i}`,
+                name: `အစားအစာ ${i + 1}`,
+                description: 'အစားအစာအစပို့တစ်ခုကို စားဖို့ အဆင့်မြှင့်ပေးပါတယ်။',
+                price: 5.99 + i,
+                image: `https://images.unsplash.com/photo-1514326640560-7d063ef2aed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Main Course': Array(10).fill().map((_, i) => ({
+                id: `main-${i}`,
+                name: `အဓိကဟင်း ${i + 1}`,
+                description: 'သင့်ဗိုက်ကို ကျန်းမာစေတဲ့ အဓိကဟင်းတစ်ခု။',
+                price: 12.99 + i,
+                image: `https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Desserts': Array(10).fill().map((_, i) => ({
+                id: `dessert-${i}`,
+                name: `အချိုပွဲ ${i + 1}`,
+                description: 'သင့်နေ့ရက်ကို အဆုံးသတ်ဖို့ ချမ်းသာတဲ့ အစားအစာ။',
+                price: 4.99 + i,
+                image: `https://images.unsplash.com/photo-1563729784474-d77dbb933a3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Drinks': Array(10).fill().map((_, i) => ({
+                id: `drink-${i}`,
+                name: `သောက်စရာ ${i + 1}`,
+                description: 'သင့်ဟင်းကို လိုက်ဖက်တဲ့ သောက်စရာတစ်ခု။',
+                price: 2.99 + i,
+                image: `https://images.unsplash.com/photo-1513553404607-988bf2703777?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Salads': Array(10).fill().map((_, i) => ({
+                id: `salad-${i}`,
+                name: `သုပ် ${i + 1}`,
+                description: 'လှပပြီး ကျန်းမာရေးနဲ့ ကိုက်ညီတဲ့ သုပ်ရွက်တစ်ခု။',
+                price: 6.99 + i,
+                image: `https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Soups': Array(10).fill().map((_, i) => ({
+                id: `soup-${i}`,
+                name: `ဟင်းချို ${i + 1}`,
+                description: 'အပူပေးပြီး သက်သာစေတဲ့ ဟင်းချိုတစ်ခု။',
+                price: 4.99 + i,
+                image: `https://images.unsplash.com/photo-1547592166-23ac45744c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Sides': Array(10).fill().map((_, i) => ({
+                id: `side-${i}`,
+                name: `ဘေးထွက် ${i + 1}`,
+                description: 'သင့်ဟင်းနဲ့ လိုက်ဖက်တဲ့ ဘေးထွက်အစားအစာ။',
+                price: 3.99 + i,
+                image: `https://images.unsplash.com/photo-1626700051175-6818013e1d4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            })),
+            'Specials': Array(10).fill().map((_, i) => ({
+                id: `special-${i}`,
+                name: `အထူး ${i + 1}`,
+                description: 'ချက်ပြုတ်သူရဲ့ ထူးခြားတဲ့ ဟင်းတစ်ခု။',
+                price: 15.99 + i,
+                image: `https://images.unsplash.com/photo-1551218807-89649560f1e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80&${i}`
+            }))
+        };
 
-    const LoginPopup = ({ onLogin }) => {
-      const [name, setName] = useState('');
-      const [phone, setPhone] = useState('');
+        const LoginPopup = ({ onLogin }) => {
+            const [name, setName] = useState('');
+            const [phone, setPhone] = useState('');
 
-      const handleLogin = () => {
-        if (name && phone) {
-          localStorage.setItem('customerName', name);
-          localStorage.setItem('customerPhone', phone);
-          onLogin({ name, phone });
-        } else {
-          alert('ကျေးဇူးပြု၍ နာမည်နဲ့ ဖုန်းနံပါတ် ထည့်ပါ။');
-        }
-      };
+            const handleLogin = () => {
+                if (name && phone) {
+                    localStorage.setItem('customerName', name);
+                    localStorage.setItem('customerPhone', phone);
+                    onLogin({ name, phone });
+                } else {
+                    alert('ကျေးဇူးပြု၍ နာမည်နဲ့ ဖုန်းနံပါတ် ထည့်ပါ။');
+                }
+            };
 
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Login</h2>
-            <div className="mb-4">
-              <label className="block mb-2 font-semibold">နာမည်</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="border p-2 rounded w-full"
-                placeholder="သင့်နာမည်ထည့်ပါ"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-2 font-semibold">ဖုန်းနံပါတ်</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="border p-2 rounded w-full"
-                placeholder="သင့်ဖုန်းနံပါတ်ထည့်ပါ"
-              />
-            </div>
-            <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded w-full">Login</button>
-          </div>
-        </div>
-      );
-    };
-
-    const MenuItem = ({ item, onClick }) => (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer" onClick={() => onClick(item)}>
-        <img src={item.image} alt={item.name} className="w-full h-40 object-cover" />
-        <div className="p-4">
-          <h3 className="font-semibold">{item.name}</h3>
-          <p className="text-sm text-gray-600 truncate">{item.description}</p>
-          <p className="font-bold mt-2">${item.price.toFixed(2)}</p>
-        </div>
-      </div>
-    );
-
-    const ItemPopup = ({ item, onClose, onAdd }) => (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h2 className="text-xl font-bold mb-4">{item.name}</h2>
-          <img src={item.image} alt={item.name} className="w-full h-48 object-cover rounded mb-4" />
-          <p className="text-gray-600 mb-4">{item.description}</p>
-          <p className="font-bold mb-4">${item.price.toFixed(2)}</p>
-          <div className="flex justify-between">
-            <button onClick={onAdd} className="bg-green-500 text-white px-4 py-2 rounded">ပေါင်းထည့်ပါ</button>
-            <button onClick={onClose} className="bg-red-500 text-white px-4 py-2 rounded">မလုပ်တော့ပါ</button>
-          </div>
-        </div>
-      </div>
-    );
-
-    const MessagePopup = ({ message, onClose }) => (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
-          <p className="mb-4">{message}</p>
-          <button onClick={onClose} className="bg-blue-500 text-white px-4 py-2 rounded">သိပါတယ်</button>
-        </div>
-      </div>
-    );
-
-    const MyProfilePopup = ({ customer, history, onClose, onLogout, language }) => {
-      const groupByDate = (orders) => {
-        const grouped = {};
-        orders.forEach(order => {
-          const date = new Date(order.timestamp).toLocaleDateString();
-          if (!grouped[date]) {
-            grouped[date] = [];
-          }
-          grouped[date].push(order);
-        });
-        return grouped;
-      };
-
-      const groupedOrders = groupByDate(history);
-      const customerId = customer.phone.slice(-4); // ဖုန်းနံပါတ်နောက်ဆုံး ၄ လုံးကို Customer ID အဖြစ်
-
-      return (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-          <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Header" className="w-full header-image object-cover" />
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <img src="https://images.unsplash.com/photo-1589301771357-2b157f5d29f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Logo" className="h-12" />
-                <h2 className="text-xl font-bold">{language === 'mm' ? 'ကိုယ်ရေးအကောင့်' : 'My Profile'}</h2>
-              </div>
-              <button onClick={() => onClose()} className="text-red-500">{language === 'mm' ? 'ပိတ်ရန်' : 'Exit'}</button>
-            </div>
-            <div className="mb-6 bg-gray-100 p-4 rounded">
-              <h3 className="text-lg font-semibold mb-2">{language === 'mm' ? 'ဖောက်သည်အချက်အလက်' : 'Customer Information'}</h3>
-              <p><strong>{language === 'mm' ? 'ဖောက်သည် ID' : 'Customer ID'}:</strong> {customerId}</p>
-              <p><strong>{language === 'mm' ? 'နာမည်' : 'Name'}:</strong> {customer.name}</p>
-              <p><strong>{language === 'mm' ? 'ဖုန်းနံပါတ်' : 'Phone'}:</strong> {customer.phone}</p>
-              <button onClick={onLogout} className="bg-red-500 text-white px-4 py-2 rounded mt-4">{language === 'mm' ? 'အကောင့်မှ ထွက်ရန်' : 'Log Out'}</button>
-            </div>
-            <h3 className="text-lg font-semibold mb-4">{language === 'mm' ? 'မှာယူမှုများ' : 'Order History'}</h3>
-            {Object.keys(groupedOrders).map(date => (
-              <div key={date} className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">{date}</h3>
-                {groupedOrders[date].map((order, index) => (
-                  <div key={index} className="mb-4 bg-gray-100 p-4 rounded">
-                    <p><strong>{language === 'mm' ? `မှာယူမှု #${index + 1}` : `Order #${index + 1}`}</strong></p>
-                    <p>{language === 'mm' ? 'အမျိုးအစား' : 'Type'}: {order.orderType}</p>
-                    <p>{language === 'mm' ? 'စုစုပေါင်း' : 'Total'}: ${order.total.toFixed(2)}</p>
-                    <p>{language === 'mm' ? 'အချိန်' : 'Time'}: {new Date(order.timestamp).toLocaleString()}</p>
-                    <p className="font-bold">{language === 'mm' ? 'အခြေအနေ' : 'Status'}: {order.status === 'In Process' ? (language === 'mm' ? 'လုပ်ဆောင်နေပါပြီ' : 'In Process') : order.status === 'Delivered' ? (language === 'mm' ? 'ပို့ဆောင်ပြီးပါပြီ' : 'Delivered') : order.status === 'Cancelled' ? (language === 'mm' ? 'ပယ်ဖျက်လိုက်ပါပြီ' : 'Cancelled') : (language === 'mm' ? 'စောင့်ဆိုင်းနေသည်' : 'Pending')}</p>
-                    {order.status === 'In Process' && (
-                      <p className="text-green-600">{language === 'mm' ? 'သင့်အော်ဒါအား လုပ်ဆောင်နေပါပြီ။ အရသာရှိစွာနဲ့ မြန်ဆန်ဖို့ ကြိုးစားနေပါတယ်' : 'We are processing your order. Preparing it deliciously and quickly!'}</p>
-                    )}
-                    <div className="mt-2">
-                      <strong>{language === 'mm' ? 'မှာယူထားသည်များ' : 'Items'}:</strong>
-                      <ul className="list-disc pl-5">
-                        {order.orderDetails.map((item, i) => (
-                          <li key={i}>{item.name} x{item.quantity} - ${(item.price * item.quantity).toFixed(2)}</li>
-                        ))}
-                      </ul>
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                        <h2 className="text-xl font-bold mb-4">Login</h2>
+                        <div className="mb-4">
+                            <label className="block mb-2 font-semibold">နာမည်</label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="border p-2 rounded w-full"
+                                placeholder="သင့်နာမည်ထည့်ပါ"
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block mb-2 font-semibold">ဖုန်းနံပါတ်</label>
+                            <input
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="border p-2 rounded w-full"
+                                placeholder="သင့်ဖုန်းနံပါတ်ထည့်ပါ"
+                            />
+                        </div>
+                        <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded w-full">Login</button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    };
-
-    const CartPopup = ({ cart, onClose, onUpdateQuantity, onRemove, onConfirm, customer }) => {
-      const [orderType, setOrderType] = useState('Dine In');
-      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-      return (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <img src="https://images.unsplash.com/photo-1589301771357-2b157f5d29f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Logo" className="h-12" />
-                <h2 className="text-xl font-bold">စားသောက်ဆိုင်နာမည်</h2>
-              </div>
-              <button onClick={() => onClose()} className="text-red-500">ထွက်ရန်</button>
-            </div>
-            <h3 className="text-lg font-semibold mb-4">သင့်ဟင်းများ</h3>
-            <div className="flex gap-4 mb-4">
-              <button
-                className={`px-4 py-2 rounded ${orderType === 'Dine In' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                onClick={() => setOrderType('Dine In')}
-              >
-                အတူစားမည်
-              </button>
-              <button
-                className={`px-4 py-2 rounded ${orderType === 'Takeaway' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                onClick={() => setOrderType('Takeaway')}
-              >
-                အပြင်ခေါ်ယူမည်
-              </button>
-            </div>
-            {cart.map(item => (
-              <div key={item.id} className="flex items-center mb-4 bg-gray-100 p-4 rounded">
-                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded mr-4" />
-                <div className="flex-1">
-                  <h4 className="font-semibold">{item.name}</h4>
-                  <p className="font-bold">${item.price.toFixed(2)}</p>
                 </div>
-                <div className="flex items-center">
-                  <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="px-2">-</button>
-                  <span className="px-2">{item.quantity}</span>
-                  <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="px-2">+</button>
-                  <button onClick={() => onRemove(item.id)} className="ml-4 text-red-500">ဖျက်ပါ</button>
-                </div>
-              </div>
-            ))}
-            <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t">
-              <p className="font-bold">စုစုပေါင်း: ${total.toFixed(2)}</p>
-              <button onClick={() => onConfirm(orderType, customer)} className="w-full bg-blue-500 text-white py-2 rounded mt-2">အော်ဒါအတည်ပြုပါ</button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    const App = () => {
-      const [language, setLanguage] = useState('en');
-      const [selectedCategory, setSelectedCategory] = useState('Appetizers');
-      const [selectedItem, setSelectedItem] = useState(null);
-      const [cart, setCart] = useState([]);
-      const [showCart, setShowCart] = useState(false);
-      const [showMessage, setShowMessage] = useState(false);
-      const [history, setHistory] = useState([]);
-      const [showProfile, setShowProfile] = useState(false);
-      const [customer, setCustomer] = useState(null);
-
-      useEffect(() => {
-        const savedName = localStorage.getItem('customerName');
-        const savedPhone = localStorage.getItem('customerPhone');
-        if (savedName && savedPhone) {
-          setCustomer({ name: savedName, phone: savedPhone });
-          socket.emit('fetchOrdersByCustomer', savedPhone);
-        }
-
-        socket.on('ordersByCustomer', (orders) => {
-          setHistory(orders);
-        });
-
-        const handlePopState = (event) => {
-          if (selectedItem) {
-            setSelectedItem(null);
-          } else if (showCart) {
-            setShowCart(false);
-          } else if (showProfile) {
-            setShowProfile(false);
-          } else {
-            window.history.pushState(null, document.title, window.location.pathname);
-          }
-        };
-        window.addEventListener('popstate', handlePopState);
-        window.history.pushState(null, document.title, window.location.pathname);
-        return () => window.removeEventListener('popstate', handlePopState);
-      }, [selectedItem, showCart, showProfile]);
-
-      useEffect(() => {
-        if (customer) {
-          socket.on('newOrder', (order) => {
-            if (order.customerPhone === customer.phone) {
-              setHistory(prev => [...prev, order]);
-            }
-          });
-
-          socket.on('updateOrderStatus', ({ orderId, status }) => {
-            setHistory(prev =>
-              prev.map((order, index) =>
-                index === orderId ? { ...order, status } : order
-              )
             );
-          });
-
-          return () => {
-            socket.off('newOrder');
-            socket.off('updateOrderStatus');
-            socket.off('ordersByCustomer');
-          };
-        }
-      }, [customer]);
-
-      const handleLogin = (customerData) => {
-        setCustomer(customerData);
-        socket.emit('fetchOrdersByCustomer', customerData.phone);
-      };
-
-      const handleLogout = () => {
-        localStorage.removeItem('customerName');
-        localStorage.removeItem('customerPhone');
-        setCustomer(null);
-        setShowProfile(false);
-        setHistory([]);
-      };
-
-      const addToCart = (item) => {
-        setCart(prev => {
-          const existing = prev.find(i => i.id === item.id);
-          if (existing) {
-            return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-          }
-          return [...prev, { ...item, quantity: 1 }];
-        });
-        setSelectedItem(null);
-      };
-
-      const updateQuantity = (id, quantity) => {
-        if (quantity === 0) {
-          setCart(prev => prev.filter(item => item.id !== id));
-        } else {
-          setCart(prev => prev.map(item => item.id === id ? { ...item, quantity } : item));
-        }
-      };
-
-      const removeItem = (id) => {
-        setCart(prev => prev.filter(item => item.id !== id));
-      };
-
-      const confirmOrder = (orderType, customer) => {
-        const orderDetails = cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          description: item.description,
-          image: item.image
-        }));
-        const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const billSlip = `Order for ${orderType}\n\n${cart.map(item => `${item.name} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`).join('\n')}\n\nTotal: $${total.toFixed(2)}`;
-        const order = {
-          customerName: customer.name,
-          customerPhone: customer.phone,
-          orderType,
-          orderDetails,
-          total,
-          billSlip,
-          timestamp: new Date().toISOString(),
-          status: 'Pending'
         };
-        socket.emit('newOrder', order);
-        setCart([]);
-        setShowCart(false);
-        setShowMessage(true);
-      };
 
-      if (!customer) {
-        return <LoginPopup onLogin={handleLogin} />;
-      }
-
-      return (
-        <div className="min-h-screen relative">
-          <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Header" className="w-full header-image object-cover" />
-          <div className="absolute white-overlay left-0 right-0 bottom-0 bg-white rounded-t-3xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="dropdown">
-                <button className="bg-blue-500 text-white px-4 py-2 rounded flex items-center">
-                  {language === 'en' ? (
-                    <>
-                      <img src="https://flagcdn.com/16x12/gb.png" alt="EN Flag" className="mr-2" />
-                      EN
-                    </>
-                  ) : (
-                    <>
-                      <img src="https://flagcdn.com/16x12/mm.png" alt="MM Flag" className="mr-2" />
-                      MM
-                    </>
-                  )}
-                  <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </button>
-                <div className="dropdown-content">
-                  <div onClick={() => setLanguage('en')}>
-                    <img src="https://flagcdn.com/16x12/gb.png" alt="EN Flag" className="inline mr-2" />
-                    English
-                  </div>
-                  <div onClick={() => setLanguage('mm')}>
-                    <img src="https://flagcdn.com/16x12/mm.png" alt="MM Flag" className="inline mr-2" />
-                    မြန်မာ
-                  </div>
+        const MenuItem = ({ item, onClick }) => (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer" onClick={() => onClick(item)}>
+                <img src={item.image} alt={item.name} className="w-full h-40 object-cover" />
+                <div className="p-4">
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <p className="text-sm text-gray-600 truncate">{item.description}</p>
+                    <p className="font-bold mt-2">${item.price.toFixed(2)}</p>
                 </div>
-              </div>
-              {history.length > 0 && (
-                <button
-                  onClick={() => setShowProfile(true)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  {language === 'mm' ? 'ကိုယ်ရေးအကောင့်' : 'My Profile'}
-                </button>
-              )}
             </div>
-            <div className="category-nav mb-4">
-              {Object.keys(menuData).map(category => (
-                <div key={category} className="px-4 py-2">
-                  <button
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded ${selectedCategory === category ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                  >
-                    {language === 'mm' ? category.replace('Appetizers', 'အစားအစာ').replace('Main Course', 'အဓိကဟင်း').replace('Desserts', 'အချိုပွဲ').replace('Drinks', 'သောက်စရာ').replace('Salads', 'သုပ်').replace('Soups', 'ဟင်းချို').replace('Sides', 'ဘေးထွက်').replace('Specials', 'အထူး') : category}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="menu-item-grid">
-              {menuData[selectedCategory].map(item => (
-                <MenuItem key={item.id} item={item} onClick={setSelectedItem} />
-              ))}
-            </div>
-          </div>
-          {selectedItem && (
-            <ItemPopup
-              item={selectedItem}
-              onClose={() => setSelectedItem(null)}
-              onAdd={() => addToCart(selectedItem)}
-            />
-          )}
-          {cart.length > 0 && (
-            <div className="fixed bottom-4 right-4">
-              <button
-                onClick={() => setShowCart(true)}
-                className="bg-blue-500 text-white px-4 py-2 rounded-full"
-              >
-                ကျွန်တော့ဟင်းများ ({cart.reduce((sum, item) => sum + item.quantity, 0)})
-              </button>
-            </div>
-          )}
-          {showCart && (
-            <CartPopup
-              cart={cart}
-              onClose={() => setShowCart(false)}
-              onUpdateQuantity={updateQuantity}
-              onRemove={removeItem}
-              onConfirm={confirmOrder}
-              customer={customer}
-            />
-          )}
-          {showMessage && (
-            <MessagePopup
-              message={language === 'mm' ? 'အားပေးမှုကို ကျေးဇူးတင်ပါတယ်။ Order အတည်ပြုရန် waiter လာပါလိမ့်မယ်။ ခဏ စောင့်ပါ' : 'Thank you for your order. A waiter will come to confirm. Please wait a moment.'}
-              onClose={() => setShowMessage(false)}
-            />
-          )}
-          {showProfile && (
-            <MyProfilePopup
-              customer={customer}
-              history={history}
-              onClose={() => setShowProfile(false)}
-              onLogout={handleLogout}
-              language={language}
-            />
-          )}
-        </div>
-      );
-    };
+        );
 
-    ReactDOM.render(<App />, document.getElementById('root'));
-  </script>
+        const ItemPopup = ({ item, onClose, onAdd }) => (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                    <h2 className="text-xl font-bold mb-4">{item.name}</h2>
+                    <img src={item.image} alt={item.name} className="w-full h-48 object-cover rounded mb-4" />
+                    <p className="text-gray-600 mb-4">{item.description}</p>
+                    <p className="font-bold mb-4">${item.price.toFixed(2)}</p>
+                    <div className="flex justify-between">
+                        <button onClick={onAdd} className="bg-green-500 text-white px-4 py-2 rounded">ပေါင်းထည့်ပါ</button>
+                        <button onClick={onClose} className="bg-red-500 text-white px-4 py-2 rounded">မလုပ်တော့ပါ</button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const MessagePopup = ({ message, onClose }) => (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
+                    <p className="mb-4">{message}</p>
+                    <button onClick={onClose} className="bg-blue-500 text-white px-4 py-2 rounded">သိပါတယ်</button>
+                </div>
+            </div>
+        );
+
+        const CartPopup = ({ cart, onClose, onUpdateQuantity, onRemove, onConfirm, customer, language }) => {
+            const [orderType, setOrderType] = useState('Dine In');
+            const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+            return (
+                <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+                    <div className="p-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <img src="https://images.unsplash.com/photo-1589301771357-2b157f5d29f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Logo" className="h-12" />
+                                <h2 className="text-xl font-bold">{language === 'mm' ? 'ဈေးခြင်း' : 'Cart'}</h2>
+                            </div>
+                            <button onClick={onClose} className="text-red-500">{language === 'mm' ? 'ပိတ်ရန်' : 'Close'}</button>
+                        </div>
+                        {cart.length === 0 ? (
+                            <p>{language === 'mm' ? 'ဈေးခြင်းထဲတွင် ဘာမှမရှိပါ။' : 'Your cart is empty.'}</p>
+                        ) : (
+                            <div>
+                                {cart.map((item, index) => (
+                                    <div key={index} className="flex justify-between items-center mb-4 bg-gray-100 p-4 rounded">
+                                        <div>
+                                            <h3 className="font-semibold">{item.name}</h3>
+                                            <p>${item.price.toFixed(2)}</p>
+                                            <div className="flex items-center mt-2">
+                                                <button onClick={() => onUpdateQuantity(index, item.quantity - 1)} className="bg-gray-300 px-2 py-1 rounded">-</button>
+                                                <span className="mx-2">{item.quantity}</span>
+                                                <button onClick={() => onUpdateQuantity(index, item.quantity + 1)} className="bg-gray-300 px-2 py-1 rounded">+</button>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => onRemove(index)} className="text-red-500">{language === 'mm' ? 'ဖယ်ရှားရန်' : 'Remove'}</button>
+                                    </div>
+                                ))}
+                                <div className="mt-4">
+                                    <label className="block mb-2 font-semibold">{language === 'mm' ? 'အော်ဒါအမျိုးအစား' : 'Order Type'}</label>
+                                    <select value={orderType} onChange={(e) => setOrderType(e.target.value)} className="border p-2 rounded w-full">
+                                        <option value="Dine In">{language === 'mm' ? 'စားသုံးရန်' : 'Dine In'}</option>
+                                        <option value="Takeaway">{language === 'mm' ? 'ယူသွားရန်' : 'Takeaway'}</option>
+                                        <option value="Delivery">{language === 'mm' ? 'ပို့ဆောင်ရန်' : 'Delivery'}</option>
+                                    </select>
+                                </div>
+                                <p className="font-bold mt-4">{language === 'mm' ? 'စုစုပေါင်း' : 'Total'}: ${total.toFixed(2)}</p>
+                                <button onClick={() => onConfirm(orderType, total)} className="bg-blue-500 text-white px-4 py-2 rounded w-full mt-4">{language === 'mm' ? 'အတည်ပြုရန်' : 'Confirm Order'}</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [language, setLanguage] = useState('mm');
+            const [category, setCategory] = useState('Appetizers');
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [cart, setCart] = useState([]);
+            const [customer, setCustomer] = useState(null);
+            const [message, setMessage] = useState('');
+            const [showMyProfile, setShowMyProfile] = useState(false);
+            const [history, setHistory] = useState([]);
+
+            useEffect(() => {
+                const savedName = localStorage.getItem('customerName');
+                const savedPhone = localStorage.getItem('customerPhone');
+                if (savedName && savedPhone) {
+                    setCustomer({ name: savedName, phone: savedPhone });
+                }
+
+                socket.on('orderUpdate', (updatedOrder) => {
+                    setHistory(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+                });
+
+                return () => {
+                    socket.off('orderUpdate');
+                };
+            }, []);
+
+            const handleAddToCart = (item) => {
+                setCart(prev => {
+                    const existingItem = prev.find(i => i.id === item.id);
+                    if (existingItem) {
+                        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+                    }
+                    return [...prev, { ...item, quantity: 1 }];
+                });
+                setSelectedItem(null);
+                setMessage(`${item.name} ${language === 'mm' ? 'ကို ဈေးခြင်းထဲ ထည့်လိုက်ပါပြီ။' : 'has been added to your cart.'}`);
+            };
+
+            const handleUpdateQuantity = (index, newQuantity) => {
+                if (newQuantity <= 0) {
+                    setCart(prev => prev.filter((_, i) => i !== index));
+                } else {
+                    setCart(prev => prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item));
+                }
+            };
+
+            const handleRemoveFromCart = (index) => {
+                setCart(prev => prev.filter((_, i) => i !== index));
+            };
+
+            const handleConfirmOrder = (orderType, total) => {
+                if (!customer) {
+                    alert(language === 'mm' ? 'ကျေးဇူးပြု၍ အကောင့်ဝင်ပါ။' : 'Please login first.');
+                    return;
+                }
+
+                const orderDetails = cart.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price
+                }));
+
+                const order = {
+                    id: Date.now().toString(),
+                    customerId: customer.phone.slice(-4),
+                    customerName: customer.name,
+                    customerPhone: customer.phone,
+                    orderDetails,
+                    orderType,
+                    total,
+                    status: 'Pending',
+                    timestamp: new Date().toISOString()
+                };
+
+                socket.emit('newOrder', order);
+                setHistory(prev => [...prev, order]);
+                setCart([]);
+                setMessage(language === 'mm' ? 'အော်ဒါ အတည်ပြုပြီးပါပြီ။ ကျေးဇူးတင်ပါတယ်။' : 'Order confirmed! Thank you.');
+            };
+
+            const handleLogin = (user) => {
+                setCustomer(user);
+            };
+
+            const handleLogout = () => {
+                localStorage.removeItem('customerName');
+                localStorage.removeItem('customerPhone');
+                setCustomer(null);
+                setShowMyProfile(false);
+                setMessage(language === 'mm' ? 'အကောင့်မှ ထွက်လိုက်ပါပြီ။' : 'Logged out successfully.');
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-100">
+                    {!customer && <LoginPopup onLogin={handleLogin} />}
+                    {selectedItem && <ItemPopup item={selectedItem} onClose={() => setSelectedItem(null)} onAdd={handleAddToCart} />}
+                    {message && <MessagePopup message={message} onClose={() => setMessage('')} />}
+                    <div className="container mx-auto p-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center">
+                                <img src="https://images.unsplash.com/photo-1589301771357-2b157f5d29f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Logo" className="h-12 mr-4" />
+                                <h1 className="text-2xl font-bold">{language === 'mm' ? 'မီနူး' : 'Menu'}</h1>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <select
+                                    value={language}
+                                    onChange={(e) => setLanguage(e.target.value)}
+                                    className="border p-2 rounded"
+                                >
+                                    <option value="mm">မြန်မာ</option>
+                                    <option value="en">English</option>
+                                </select>
+                                {customer && (
+                                    <button
+                                        onClick={() => setShowMyProfile(true)}
+                                        className="bg-blue-500 text-white px-4 py-2 rounded"
+                                    >
+                                        {language === 'mm' ? 'ကိုယ်ရေးအကောင့်' : 'My Profile'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => (cart.length > 0 ? setShowMyProfile(true) : setMessage(language === 'mm' ? 'ဈေးခြင်းထဲမှာ ဘာမှမရှိပါ။' : 'Cart is empty.'))}
+                                    className="bg-green-500 text-white px-4 py-2 rounded"
+                                >
+                                    {language === 'mm' ? `ဈေးခြင်း (${cart.length})` : `Cart (${cart.length})`}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {Object.keys(menuData).map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setCategory(cat)}
+                                    className={`px-4 py-2 rounded ${category === cat ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {menuData[category].map(item => (
+                                <MenuItem key={item.id} item={item} onClick={setSelectedItem} />
+                            ))}
+                        </div>
+                    </div>
+                    {customer && cart.length > 0 && (
+                        <CartPopup
+                            cart={cart}
+                            onClose={() => setShowMyProfile(false)}
+                            onUpdateQuantity={handleUpdateQuantity}
+                            onRemove={handleRemoveFromCart}
+                            onConfirm={handleConfirmOrder}
+                            customer={customer}
+                            language={language}
+                        />
+                    )}
+                    {customer && showMyProfile && (
+                        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+                            <div className="p-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <img src="https://images.unsplash.com/photo-1589301771357-2b157f5d29f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Logo" className="h-12" />
+                                        <h2 className="text-xl font-bold">{language === 'mm' ? 'ကိုယ်ရေးအကောင့်' : 'My Profile'}</h2>
+                                    </div>
+                                    <button onClick={() => setShowMyProfile(false)} className="text-red-500">{language === 'mm' ? 'ပိတ်ရန်' : 'Exit'}</button>
+                                </div>
+                                <div className="mb-6 bg-gray-100 p-4 rounded">
+                                    <h3 className="text-lg font-semibold mb-2">{language === 'mm' ? 'ဖောက်သည်အချက်အလက်' : 'Customer Information'}</h3>
+                                    <p><strong>{language === 'mm' ? 'ဖောက်သည် ID' : 'Customer ID'}:</strong> {customer.phone.slice(-4)}</p>
+                                    <p><strong>{language === 'mm' ? 'နာမည်' : 'Name'}:</strong> {customer.name}</p>
+                                    <p><strong>{language === 'mm' ? 'ဖုန်းနံပါတ်' : 'Phone'}:</strong> {customer.phone}</p>
+                                    <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded mt-4">{language === 'mm' ? 'အကောင့်မှ ထွက်ရန်' : 'Log Out'}</button>
+                                </div>
+                                <h3 className="text-lg font-semibold mb-4">{language === 'mm' ? 'မှာယူမှုများ' : 'Order History'}</h3>
+                                {history.map((order, index) => (
+                                    <div key={index} className="mb-4 bg-gray-100 p-4 rounded">
+                                        <p><strong>{language === 'mm' ? `မှာယူမှု #${index + 1}` : `Order #${index + 1}`}</strong></p>
+                                        <p>{language === 'mm' ? 'အမျိုးအစား' : 'Type'}: {order.orderType}</p>
+                                        <p>{language === 'mm' ? 'စုစုပေါင်း' : 'Total'}: ${order.total.toFixed(2)}</p>
+                                        <p>{language === 'mm' ? 'အချိန်' : 'Time'}: {new Date(order.timestamp).toLocaleString()}</p>
+                                        <p className="font-bold">{language === 'mm' ? 'အခြေအနေ' : 'Status'}: {order.status === 'In Process' ? (language === 'mm' ? 'လုပ်ဆောင်နေပါပြီ' : 'In Process') : order.status === 'Delivered' ? (language === 'mm' ? 'ပို့ဆောင်ပြီးပါပြီ' : 'Delivered') : order.status === 'Cancelled' ? (language === 'mm' ? 'ပယ်ဖျက်လိုက်ပါပြီ' : 'Cancelled') : (language === 'mm' ? 'စောင့်ဆိုင်းနေသည်' : 'Pending')}</p>
+                                        {order.status === 'In Process' && (
+                                            <p className="text-green-600">{language === 'mm' ? 'သင့်အော်ဒါအား လုပ်ဆောင်နေပါပြီ။ အရသာရှိစွာနဲ့ မြန်ဆန်ဖို့ ကြိုးစားနေပါတယ်' : 'We are processing your order. Preparing it deliciously and quickly!'}</p>
+                                        )}
+                                        <div className="mt-2">
+                                            <strong>{language === 'mm' ? 'မှာယူထားသည်များ' : 'Items'}:</strong>
+                                            <ul className="list-disc pl-5">
+                                                {order.orderDetails.map((item, i) => (
+                                                    <li key={i}>{item.name} x{item.quantity} - ${(item.price * item.quantity).toFixed(2)}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>

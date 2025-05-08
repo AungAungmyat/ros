@@ -1,52 +1,43 @@
 const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-
 const app = express();
+const path = require('path');
+const http = require('http');
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: '*',
-  }
+const { Server } = require('socket.io');
+const io = new Server(server);
+
+// Serve static files (index.html and dashboard.html)
+app.use(express.static(path.join(__dirname, '/')));
+
+// Serve index.html for the root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let orders = []; // Order တွေကို သိမ်းဖို့ Array
+// Serve dashboard.html for the /dashboard route
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
 
+// Socket.IO for real-time order updates
 io.on('connection', (socket) => {
-  console.log('A client connected');
+    console.log('A user connected');
 
-  // အော်ဒါအသစ်တင်တဲ့ Event
-  socket.on('newOrder', (order) => {
-    orders.push(order);
-    io.emit('newOrder', order); // Menu နဲ့ Dashboard ကို ပို့ပေးမယ်
-  });
+    socket.on('newOrder', (order) => {
+        io.emit('newOrder', order);
+        io.emit('orderUpdate', { ...order, status: 'In Process' });
+    });
 
-  // အော်ဒါတွေကို Customer အလိုက် ပြန်ယူတဲ့ Event
-  socket.on('fetchOrdersByCustomer', (phoneNumber) => {
-    const customerOrders = orders.filter(order => order.customerPhone === phoneNumber);
-    socket.emit('ordersByCustomer', customerOrders);
-  });
+    socket.on('orderUpdate', (updatedOrder) => {
+        io.emit('orderUpdate', updatedOrder);
+    });
 
-  // အော်ဒါတွေအားလုံးကို ပြန်ယူတဲ့ Event (Dashboard အတွက်)
-  socket.on('fetchOrders', () => {
-    socket.emit('orders', orders);
-  });
-
-  // Status ပြောင်းတဲ့ Event
-  socket.on('updateOrderStatus', ({ orderId, status }) => {
-    if (status === 'Rejected') {
-      orders = orders.filter((_, index) => index !== orderId);
-    } else {
-      orders[orderId].status = status;
-    }
-    io.emit('updateOrderStatus', { orderId, status });
-  });
-
-  socket.on('disconnect', () => {
-    console.log('A client disconnected');
-  });
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
 });
 
-server.listen(3000, () => {
-  console.log('Server running on port 3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });

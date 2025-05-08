@@ -1,13 +1,13 @@
 {
-  "name": "restaurant-order-server",
-  "version": "1.0.0",
-  "description": "WebSocket server for restaurant orders",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.17.1",
-    "socket.io": "^4.5.0"
-  }
+    "name": "ros",
+    "version": "1.0.0",
+    "description": "Restaurant Order System",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "socket.io": "^4.5.0"
+    }
 }
