@@ -19,17 +19,33 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
+// Store orders in memory (for simplicity, no database)
+let orders = [];
+
 // Socket.IO for real-time order updates
 io.on('connection', (socket) => {
     console.log('A user connected');
 
+    // Handle new orders
     socket.on('newOrder', (order) => {
+        orders.push(order);
         io.emit('newOrder', order);
-        io.emit('orderUpdate', { ...order, status: 'In Process' });
+        // Immediately update status to "In Process"
+        const updatedOrder = { ...order, status: 'In Process' };
+        orders = orders.map(o => o.id === order.id ? updatedOrder : o);
+        io.emit('orderUpdate', updatedOrder);
     });
 
+    // Handle order updates
     socket.on('orderUpdate', (updatedOrder) => {
+        orders = orders.map(o => o.id === updatedOrder.id ? updatedOrder : o);
         io.emit('orderUpdate', updatedOrder);
+    });
+
+    // Fetch orders for a specific customer
+    socket.on('fetchOrders', (phone) => {
+        const customerOrders = orders.filter(order => order.customerPhone === phone);
+        socket.emit('orders', customerOrders);
     });
 
     socket.on('disconnect', () => {
