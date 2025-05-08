@@ -7,28 +7,43 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST']
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('QR Menu Order Server');
-});
+let orders = []; // Order တွေကို သိမ်းဖို့ Array
 
 io.on('connection', (socket) => {
-  const shopId = socket.handshake.query.shopId;
-  console.log(`Client connected for shop: ${shopId}`);
+  console.log('A client connected');
 
-  socket.join(shopId);
-
+  // အော်ဒါအသစ်တင်တဲ့ Event
   socket.on('newOrder', (order) => {
-    if (order.shopId === shopId) {
-      io.to(shopId).emit('newOrder', order);
+    orders.push(order);
+    io.emit('newOrder', order); // Menu နဲ့ Dashboard ကို ပို့ပေးမယ်
+  });
+
+  // အော်ဒါတွေကို Customer အလိုက် ပြန်ယူတဲ့ Event
+  socket.on('fetchOrdersByCustomer', (phoneNumber) => {
+    const customerOrders = orders.filter(order => order.customerPhone === phoneNumber);
+    socket.emit('ordersByCustomer', customerOrders);
+  });
+
+  // အော်ဒါတွေအားလုံးကို ပြန်ယူတဲ့ Event (Dashboard အတွက်)
+  socket.on('fetchOrders', () => {
+    socket.emit('orders', orders);
+  });
+
+  // Status ပြောင်းတဲ့ Event
+  socket.on('updateOrderStatus', ({ orderId, status }) => {
+    if (status === 'Rejected') {
+      orders = orders.filter((_, index) => index !== orderId);
+    } else {
+      orders[orderId].status = status;
     }
+    io.emit('updateOrderStatus', { orderId, status });
   });
 
   socket.on('disconnect', () => {
-    console.log(`Client disconnected from shop: ${shopId}`);
+    console.log('A client disconnected');
   });
 });
 
